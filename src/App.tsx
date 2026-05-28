@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Zap, Bell } from 'lucide-react'
+import { Zap, Bell, LogOut } from 'lucide-react'
 import { fetchCoins, fetchStats, triggerRefresh, supabase } from './lib/api'
+import { useAuth } from './lib/auth'
 import type { Coin, FilterTab, SortField, SortDir, Stats } from './lib/types'
 import GregLogo from './components/GregLogo'
 import FilterTabs from './components/FilterTabs'
@@ -10,10 +11,12 @@ import StatBar from './components/StatBar'
 import CoinRow from './components/CoinRow'
 import CoinDetail from './components/CoinDetail'
 import SortableHeader from './components/SortableHeader'
+import AuthPage from './components/AuthPage'
 
 const AUTO_REFRESH_MS = 30_000
 
-export default function App() {
+function Dashboard() {
+  const { signOut } = useAuth()
   const [coins, setCoins] = useState<Coin[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(false)
@@ -56,6 +59,10 @@ export default function App() {
       setRefreshing(false)
     }
   }, [load])
+
+  const handleSignOut = async () => {
+    await signOut()
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -119,6 +126,13 @@ export default function App() {
               {watchlist.size > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-cyan-500 rounded-full" />}
             </button>
             <RefreshButton lastRefresh={lastRefresh} loading={refreshing} onRefresh={handleRefresh} />
+            <button
+              onClick={handleSignOut}
+              className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-colors"
+              title="Sign out"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </header>
@@ -222,4 +236,25 @@ export default function App() {
       )}
     </div>
   )
+}
+
+export default function App() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <GregLogo size={64} />
+          <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <AuthPage />
+  }
+
+  return <Dashboard />
 }
